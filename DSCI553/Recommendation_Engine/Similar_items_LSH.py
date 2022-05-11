@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
 
 
 import sys
@@ -30,44 +28,10 @@ sc.setLogLevel("WARN")
 Number_hash_fxns = 60
 
 
-# In[4]:
-
 
 start = time.time()
 ### load data into rdd and do rough preprocessing
 input_data = sc.textFile(input_file_path).filter(lambda x :x !='user_id,business_id,stars' ).                                            map(lambda x : x.split(",")).map(lambda x : (x[0],x[1],float(x[2])))
-
-
-# In[5]:
-
-
-#Row_cnt = input_data.count()
-#print(Row_cnt) 455854
-
-
-# In[6]:
-
-
-## NUmber of Unique User Ids :
-#user_cnt = input_data.map(lambda x : x[0]).distinct().count()
-#print(user_cnt)
-
-
-# In[7]:
-
-
-#user_cnt
-
-
-# In[8]:
-
-
-## NUmber of Unique Business Ids :
-#business_cnt = input_data.map(lambda x : x[1]).distinct().count()
-#print(business_cnt)
-
-
-# In[9]:
 
 
 ### Aim is identify similar businesses 
@@ -100,27 +64,6 @@ For these candidate pairs, calculate actual jaccard Similarity and write these s
 '''
 
 
-# In[10]:
-
-
-### First Lets convert user and business ids into integers by making indexes and make a 
-#charactertistic matrix for all these user business ids
-
-
-# In[11]:
-
-
-#input_data.map(lambda x : x[0]).distinct().take(10)
-
-
-# In[12]:
-
-
-## User Indexing
-
-
-# In[13]:
-
 
 user_indexs_tmp = input_data.map(lambda x : x[0]).distinct().sortBy(lambda k : k)
 
@@ -141,13 +84,6 @@ user_indexes = user_indexs_tmp.zipWithIndex()
 # business_indexes
 
 
-# In[15]:
-
-
-#user_indexes
-
-
-# In[16]:
 
 
 ## Business Indexing 
@@ -162,14 +98,6 @@ business_indexes = business_indexs_tmp.zipWithIndex()
 #  ('--DaPTJW3-tB1vP-PfdTEg', 3),
 #  ('--FBCX-N37CMYDfs790Bnw', 4)]
 
-
-# In[ ]:
-
-
-
-
-
-# In[17]:
 
 
 ## Now lets generate a charateristic Matrix 
@@ -201,19 +129,6 @@ user_indexes_dict = user_indexes.collectAsMap()
 business_indexes_dict = business_indexes.collectAsMap()
 
 
-# In[18]:
-
-
-#input_data
-
-
-# In[19]:
-
-
-#input_data.take(1)
-
-
-# In[20]:
 
 
 ### now,we need to generate list of users who reviewed a business
@@ -234,16 +149,7 @@ Business_Rated_users = input_data.map(lambda x : (x[1],x[0])).groupByKey().mapVa
 # ## now for each business, We have list of all the user ids who ever voted for that busines. Think of each row in this rdd as 1 column 
 # ## Each column only contains characteristic matrix row numbers which have value = 1
 
-        
 
-
-# In[ ]:
-
-
-
-
-
-# In[21]:
 
 
 ### Now is time to build Signature Matrix. For that, we need to build set of Hash Functions 
@@ -266,13 +172,7 @@ Read lecture notes to see how a hash function is used in generating derived inde
 import numpy
 
 
-# In[ ]:
 
-
-
-
-
-# In[23]:
 
 
 ##https://stackoverflow.com/questions/49631178/using-for-loop-to-define-multiple-functions-python
@@ -303,7 +203,6 @@ def find_signature_val(sorted_input,hash_output_list_1):
     
 
 
-# In[27]:
 
 
 def hasfunction_apply(x):
@@ -317,19 +216,6 @@ def hasfunction_apply(x):
     return find_signature_val(sorted_input,hash_output_list_1)
 
 
-# In[28]:
-
-
-#Business_Rated_users.take(1)
-
-
-# In[29]:
-
-
-#_ = Business_Rated_users.collect()
-
-
-# In[30]:
 
 
 Business_Rated_users_repart = Business_Rated_users.repartition(100)
@@ -345,17 +231,12 @@ Signature_Matrix = Business_Rated_users_repart.mapValues(hasfunction_apply)
 
 
 
-#s = Signature_Matrix.collect()
-   #4.638217926025391
 
-
-# In[33]:
 
 
 import itertools
 
 
-# In[34]:
 
 
 import math
@@ -375,19 +256,7 @@ def convert_sig2_b_n_LSH(sig_vector, num_bands):
     return bands_list
 
 
-# In[35]:
 
-
-#convert_sig2_b_n_LSH([1,2,3,4,5,6,7,8,9,10], 2)
-
-
-# In[ ]:
-
-
-
-
-
-# In[36]:
 
 
 from itertools import combinations
@@ -396,43 +265,15 @@ def conbinations_sort(lst):
     return [businessid1_id2 for businessid1_id2 in combinations(sorted(list(set(lst))), 2)]
 
 
-# In[37]:
 
 
 candidate_pairs = Signature_Matrix         .flatMap(lambda x: [(tuple(n_bins), x[0]) for n_bins in convert_sig2_b_n_LSH(x[1], 30)])         .groupByKey().map(lambda x: list(x[1])).filter(lambda list_cnt: len(list_cnt) > 1)         .flatMap(conbinations_sort).filter(lambda x : x[0]!=x[1]).distinct()
 
 
-# In[ ]:
-
-
-
-
-
-# In[38]:
-
-
-#candidate_pairs.take(1)
-
-
-# In[39]:
-
-
-#Business_Rated_users.take(1)
-
-
-# In[40]:
 
 
 first_join = candidate_pairs.leftOuterJoin(Business_Rated_users)
 
-
-# In[41]:
-
-
-#first_join.count()
-
-
-# In[42]:
 
 
 both_joined = first_join.map(lambda x : (x[1][0],(x[0],x[1][1]))).leftOuterJoin(Business_Rated_users)
@@ -444,19 +285,6 @@ both_joined = first_join.map(lambda x : (x[1][0],(x[0],x[1][1]))).leftOuterJoin(
 join_formatted = both_joined.map(lambda x :((x[0],x[-1][0][0]),(x[-1][-1],x[-1][0][1])))
 
 
-# In[44]:
-
-
-#vec1 = join_formatted.take(1)[0]
-
-
-# In[45]:
-
-
-#vec1[1]
-
-
-# In[46]:
 
 
 def above_threshold(jaccard,thresh=0.5):
@@ -482,14 +310,10 @@ def jaccard_similarity(vector1,vector2):
     return jaccard
 
 
-# In[47]:
-
 
 
 output_pairs_list = join_formatted.map(lambda x : (x[0],jaccard_similarity(x[1][0],x[1][1]))).filter(lambda x : (x[1]>=0.5))#.sortBy(lambda x : -x[1])
 
-
-# In[48]:
 
 
 index_2_bns_dict = {}
@@ -498,46 +322,13 @@ for key,val in business_indexes_dict.items():
     index_2_bns_dict[val] = key
 
 
-# In[ ]:
-
-
-
-
-
-# In[49]:
-
-
 
 output_pairs_list_export = output_pairs_list.map(lambda x : ((index_2_bns_dict[x[0][0]],index_2_bns_dict[x[0][1]]),x[1]))
 
-
-# In[50]:
-
-
-#output_pairs_list_export.map(lambda X : ((sorted(X[0])),X[1]))
-
-
-# In[51]:
-
-
-
 sorted_output_pairs = output_pairs_list_export.map(lambda x : ((sorted(x[0])),x[1])).map(lambda x : (x[0][0],x[0][1],x[1])).sortBy(lambda a : (a[0],a[1])).collect()
-
-
-# In[52]:
-
-
-#sorted_output_pairs[-1]
-
-
-# In[53]:
-
 
 def format_output(x):
     return x[0]+","+x[1]+","+str(x[2])
-
-
-# In[54]:
 
 
 with open(output_file_path, 'w+') as LSH_has_ouput:
@@ -556,56 +347,3 @@ LSH_has_ouput.close()
 #print(candidate_pairs.count())
 
 print(time.time()-start)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[56]:
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
