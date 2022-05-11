@@ -10,59 +10,11 @@ start = time.time()
 
 import sys
 
-# import random
-# randomlist = []
-# for i in range(0,10):
-#     n = random.randint(1,2000)
-#     randomlist.append(n)
-# print(randomlist)
-# [16, 175, 83, 54, 134,159,345,231,12,897]
-# 159
-# [1770, 345, 722, 1072, 655, 1995, 607, 63, 792, 1796]
-
-# Python program to display all the prime numbers within an interval
-
-# lower = 9000
-# upper = 50000
-
-# print("Prime numbers between", lower, "and", upper, "are:")
-
-# prime_list = []
-# for num in range(lower, upper + 1):
-#     if num > 1:
-#         for i in range(2, num):
-#             if (num % i) == 0:
-#                 break
-#         else:
-#             print(num)
-#             prime_list.append(num)
-#     if len(prime_list)>10:
-#         break
-#     else:
-#         continue
-# 9001
-# 9007
-# 9011
-# 9013
-# 9029
-# 9041
-# 9043
-# 9049
-# 9059
-# 9067
-# 9091
-
-## 13147, 14923,17749,19919,18443,16091,15391,14563,40351,45763
-#  (Source: https://calculat.io/number/prime/40000--50000)
-
-
 
 global num_functions
 num_functions=10
 global m 
 
-#13147, 14923,17749,19919,18443,16091,15391,14563,40351,45763
-    #func_list= [400069,600091,450029,50053,670049,820067,840023,890053,45763,890119]
 
 m = 69997
 def get_func(num_functions):
@@ -125,7 +77,6 @@ def bloomfilter(stream_element):
     return y_true,y_pred
 
 
-# python task1.py <input_filename> stream_size num_of_asks <output_filename>
 
 path = sys.argv[1]
 
@@ -162,7 +113,10 @@ fout.close()
 end = time.time()
 
 print("Duration : {}".format(end-start))
-        
+    
+    
+# python task1.py <input_filename> stream_size num_of_asks <output_filename>
+
     
         
     
