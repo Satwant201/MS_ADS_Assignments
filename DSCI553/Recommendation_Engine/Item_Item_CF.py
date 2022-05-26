@@ -5,6 +5,7 @@
 
 # In[1]:
 
+################################################### Library Imports ######################################################################
 
 import sys
 import time
@@ -14,6 +15,103 @@ import math
 
 from operator import add
 from pyspark import SparkContext,SparkConf
+from math import sqrt as msqrt
+
+#################################################################################################################################################
+
+
+################################################### Function Definitions ######################################################################
+
+def pearson_Correlation_Calculation(x):
+    Numerator = 0
+    denomitor1 = 0
+    denomitor2 = 0
+    if len(x[1])==0:
+        return (x[0],0)
+    for pairs in x[1]:
+        Numerator+=pairs[0]*pairs[1]
+        denomitor1+=pairs[0]*pairs[0]
+        denomitor2+=pairs[1]*pairs[1]
+    
+    if denomitor1==0:
+        return (x[0],0)
+    elif denomitor2==0:
+        return (x[0],0)
+    elif len(x[1])<50: ##  15(1.11) changed to 20(1.10) change to 25( 1.09) changed to 40(1.08) changed to 50 (1.07) change to 60.
+        return (x[0],0)
+    else:
+        return (x[0],round(Numerator/(msqrt(denomitor1)*msqrt(denomitor2)),3))
+
+def weighted_avg_prediction(prediciton_sample):
+    try:
+        user = user_indexes_dict.get(prediciton_sample[0],None)
+        if user is None:
+            return 3
+
+        item= business_indexes_dict.get(prediciton_sample[1],None)
+
+    #     itemset = perason_lookup_table_dict[item]
+        numerator = 0
+        denominator = 0
+        rat_tuples = []
+        weight_lst = set()
+        rating_lookup_dict = user_business_rating_lookup_1[user]
+        if item is None:
+            rating = 0
+            for value in rating_lookup_dict.values():
+                rating+=value
+            return rating/len(rating_lookup_dict)
+
+            
+#             return NaN
+
+        for item_2,rating in rating_lookup_dict.items():
+            key = tuple(sorted((item,item_2),reverse=1))
+            weight = Pearson_lookup_table.get(key,0.00000001) #change 0.00000001 to 0
+    #         print(weight)
+            numerator+=weight*rating
+            denominator+=abs(weight)
+            if weight!=0.00000001:
+                rat_tuples.append((weight,rating))
+                weight_lst.add(weight)
+        if len(rat_tuples)==0 or list(weight_lst)==[0] :
+            rating = 0
+            for value in rating_lookup_dict.values():
+                rating+=value
+            return rating/len(rating_lookup_dict)
+#         print(numerator/denominator)
+        sorted_tuples = sorted(rat_tuples,key=lambda x : -x[0])[:5]
+        
+#         print(len(sorted_tuples))
+        numerator1 = 0
+        denominator1 = 0
+
+        for items in sorted_tuples:
+            numerator1+=items[0]*items[1]
+            denominator1+=abs(items[0])
+            
+        if denominator1==0:
+            rating = 0
+#             print("whoo")
+            for value in rating_lookup_dict.values():
+                rating+=value
+            return rating/len(rating_lookup_dict)
+        if numerator1<0:  ### added this line to remove negative ratings 
+            return  3     #### as of now best score found at 3. change to abs() error increased
+        else:
+            if (numerator1/denominator1)>5: ### added this line to put uppe rlimit to 5
+                return 5
+            else:
+                return (numerator1/denominator1)
+    except:
+        return 3
+
+
+def format_output(x):
+    return x[0]+","+x[1]+","+str(x[2])
+
+#################################################################################################################################################
+
 
 #input_file_path = "../Data/yelp_train.csv"
 
@@ -179,18 +277,6 @@ for key,val in user_business_rating_lookup.items():
     
 
 
-# In[16]:
-
-
-
-
-# In[18]:
-
-
-#Item_level_averages = sample_rdd.map(lambda x : (x[1],x[2])).groupByKey().mapValues(list).map(lambda x : (x[0],sum(x[1])/len(x[1]))).collectAsMap()
-
-
-# In[19]:
 
 
 
@@ -235,72 +321,18 @@ left = sample_rdd.map(lambda x : (x[1],(x[0],x[2]))).join(Item_level_averages_rd
 # In[24]:
 
 
-# reformat_data = left.join(left).filter(lambda x : x[1][0][0]!=x[1][1][0])
-
 reformat_data = left.join(left).filter(lambda x : x[1][0][0]>x[1][1][0])
 
 
-# In[ ]:
-
-
-
-
-
-# In[25]:
-
-
-
-# reformat_data.map(lambda x: (tuple(sorted((x[1][0][0],x[1][1][0]))),(x[1][0][1],x[1][1][1]))).groupByKey().mapValues(list).take(100)
-
-# item_item_rating_vectors = reformat_data.map(format_tuple).distinct().map(lambda x : (x[0],x[1])).groupByKey().mapValues(list)
 
 item_item_rating_vectors = reformat_data.map(lambda x : ((x[1][0][0],x[1][1][0]),(x[1][0][1],x[1][1][1]))).groupByKey().mapValues(list)
 
 
 
-# .groupByKey().flatMapValues(list).take(100)
-
-
-# In[26]:
-
-
-#item_item_rating_vectors.take(1)
-
-
-# In[27]:
-
-
-from math import sqrt as msqrt
-
-
-# In[28]:
-
-
-def pearson_Correlation_Calculation(x):
-    Numerator = 0
-    denomitor1 = 0
-    denomitor2 = 0
-    if len(x[1])==0:
-        return (x[0],0)
-    for pairs in x[1]:
-        Numerator+=pairs[0]*pairs[1]
-        denomitor1+=pairs[0]*pairs[0]
-        denomitor2+=pairs[1]*pairs[1]
-    
-    if denomitor1==0:
-        return (x[0],0)
-    elif denomitor2==0:
-        return (x[0],0)
-    elif len(x[1])<50: ##  15(1.11) changed to 20(1.10) change to 25( 1.09) changed to 40(1.08) changed to 50 (1.07) change to 60.
-        return (x[0],0)
-    else:
-        return (x[0],round(Numerator/(msqrt(denomitor1)*msqrt(denomitor2)),3))
-
 
 
 Pearson_lookup_table = item_item_rating_vectors.filter(lambda x : len(x[1])>50).map(pearson_Correlation_Calculation).filter(lambda x : x[1]!=0).collectAsMap()
 
-#Pearson_lookup_table = item_item_rating_vectors.map(pearson_Correlation_Calculation).collectAsMap()
 
 
 training_over= time.time()
@@ -316,9 +348,6 @@ print("Training Time Taken : ",training_over-start)
 gc.collect()
 
 
-# ## generate Weighted Average rating for a given user-business pair
-
-# In[ ]:
 
 test_file_path = sys.argv[2]
 
@@ -329,92 +358,10 @@ repart_num = 1   # at default partition, runtime is 60-80 seconds
 
 prediction_data = sc.textFile(test_file_path).repartition(repart_num)
 
-
-
-
-
 header = prediction_data.take(1)
 
 
-
-
-#user_business_rating_lookup_1
-
-def weighted_avg_prediction(prediciton_sample):
-    try:
-        user = user_indexes_dict.get(prediciton_sample[0],None)
-        if user is None:
-            return 3
-
-        item= business_indexes_dict.get(prediciton_sample[1],None)
-
-    #     itemset = perason_lookup_table_dict[item]
-        numerator = 0
-        denominator = 0
-        rat_tuples = []
-        weight_lst = set()
-        rating_lookup_dict = user_business_rating_lookup_1[user]
-        if item is None:
-            rating = 0
-            for value in rating_lookup_dict.values():
-                rating+=value
-            return rating/len(rating_lookup_dict)
-
-            
-#             return NaN
-
-        for item_2,rating in rating_lookup_dict.items():
-            key = tuple(sorted((item,item_2),reverse=1))
-            weight = Pearson_lookup_table.get(key,0.00000001) #change 0.00000001 to 0
-    #         print(weight)
-            numerator+=weight*rating
-            denominator+=abs(weight)
-            if weight!=0.00000001:
-                rat_tuples.append((weight,rating))
-                weight_lst.add(weight)
-        if len(rat_tuples)==0 or list(weight_lst)==[0] :
-            rating = 0
-            for value in rating_lookup_dict.values():
-                rating+=value
-            return rating/len(rating_lookup_dict)
-#         print(numerator/denominator)
-        sorted_tuples = sorted(rat_tuples,key=lambda x : -x[0])[:5]
-        
-#         print(len(sorted_tuples))
-        numerator1 = 0
-        denominator1 = 0
-
-        for items in sorted_tuples:
-            numerator1+=items[0]*items[1]
-            denominator1+=abs(items[0])
-            
-        if denominator1==0:
-            rating = 0
-#             print("whoo")
-            for value in rating_lookup_dict.values():
-                rating+=value
-            return rating/len(rating_lookup_dict)
-        if numerator1<0:  ### added this line to remove negative ratings 
-            return  3     #### as of now best score found at 3. change to abs() error increased
-        else:
-            if (numerator1/denominator1)>5: ### added this line to put uppe rlimit to 5
-                return 5
-            else:
-                return (numerator1/denominator1)
-    except:
-        return 3
-
-
 pred_dat_input = prediction_data.filter(lambda x : x!=header[0]).map(lambda x : x.split(","))
-
-
-# In[59]:
-
-
-#pred_dat_input.take(1)
-
-
-# In[ ]:
 
 
 s1 = time.time()
@@ -423,16 +370,6 @@ s2 = time.time()
 print(s2-s1)
 
 print("Scoring Time Taken : ",(s2-training_over))
-
-
-
-# In[ ]:
-
-
-
-def format_output(x):
-    return x[0]+","+x[1]+","+str(x[2])
-
 
 
 output_file_path= sys.argv[3]
