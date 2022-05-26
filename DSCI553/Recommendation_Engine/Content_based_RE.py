@@ -32,19 +32,28 @@ Execution Time:
 
 '''
 
+##################################################Library Imports #########################################################################
 
 
 import numpy as np
 import json
 
 import os
+from collections import defaultdict
+
+import operator
+import sys
+import time
+
 
 from pyspark import SparkContext
 
 sc = SparkContext()#conf=conf)
 sc.setLogLevel("ERROR")
 
+#################################################################################################################################################
 
+##############################################Function Defintions ###############################################################################
 
 
 def extract_nested_feature(dictionary,paramter):
@@ -54,9 +63,29 @@ def extract_nested_feature(dictionary,paramter):
     val= dictionary.get(target,0)
     return float(val)
 
-#from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+def func(x):
+    return business_photo_cnt.get(x,0)
 
-import time
+def func2(x):
+    cnt_dict = business_neigh_fict.get(x,None)
+    if cnt_dict is None:
+        return mean_neighbours
+    return cnt_dict['user_id']
+
+
+def func3(x):
+    cnt_dict = users_neigh_fict.get(x,None)
+    if cnt_dict is None:
+        return mean_neighbours_user
+    return cnt_dict['business_id']
+
+
+def func4(x):
+    
+    return business_postal_avg.get(x,0)
+
+#################################################################################################################################################
+
 
 start_time = time.time()
 
@@ -64,7 +93,6 @@ start_time = time.time()
 
 print("Loading necessary system arguments")
 
-import sys
 
 # train_folder = "../Data/"
 # test_file = "../Data/yelp_test_ans.csv"
@@ -79,9 +107,6 @@ output_file = sys.argv[3]
 tips_data = sc.textFile(os.path.join(train_folder, 'tip.json')).map(json.loads)
 
 
-from collections import defaultdict
-
-import operator
 
 tips_base_data = tips_data.map(lambda x : ((x['business_id']),x['likes']))
 
@@ -132,19 +157,9 @@ header = traing_rdd_read.take(1)[0] ### added
 
 training_rdd = traing_rdd_read.filter(lambda x : x!=header).map(lambda x : x.split(",")).map(lambda x : (x[0],x[1],float(x[2]))) ### addeed 
 
-# key_leb = {}
-# for key,val in user_json_map.items():
-#     null_cnt = sum([w for w in val if w=''])
-#     lef = key_leb.get(null_cnt,0)
-#     key_leb[null_cnt] = lef+1
 
-
-################
 
 training_features = training_rdd.map(lambda x : ((x[0],x[1]),(user_lookup.get(x[0],(avg_users_reviewcount,avg_users_rating,0,0)),business_lookup.get(x[1],(avg_businesses_rating,avg_businesses_reviewcount,2)),tips_data_dict1_1.get(x[1],0),                                                              x[2])))
-
-# >>> training_features.take(1)
-# [(('vxR_YV0atFxIxfOnF9uHjQ', 'gTw6PENNGl68ZPUpYWP50A'), ((353, 2005, 69, 4.11), (4.0, 876, 2), 5.0))]
 
 
 
@@ -294,35 +309,6 @@ loading results from item based collaborative filtering to be used as a feature
 
 '''
 
-def func(x):
-    return business_photo_cnt.get(x,0)
-
-def func2(x):
-    cnt_dict = business_neigh_fict.get(x,None)
-    if cnt_dict is None:
-        return mean_neighbours
-    return cnt_dict['user_id']
-
-
-def func3(x):
-    cnt_dict = users_neigh_fict.get(x,None)
-    if cnt_dict is None:
-        return mean_neighbours_user
-    return cnt_dict['business_id']
-
-
-def func4(x):
-    
-    return business_postal_avg.get(x,0)
-
-
-# In[10]:
-
-
-test_file
-
-
-# In[11]:
 
 
 train_df = pd.read_csv("Train_data_pd.csv")
